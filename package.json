@@ -1,0 +1,38 @@
+{
+  "name": "cognimeet_server",
+  "version": "1.0.0",
+  "description": "Backend Server for CogniMeet",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vansh-000/CogniMeet_server.git"
+  },
+  "keywords": [
+    "CogniMeet",
+    "Full",
+    "Stack",
+    "AI/ML"
+  ],
+  "author": "Vansh Verma",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vansh-000/CogniMeet_server/issues"
+  },
+  "homepage": "https://github.com/vansh-000/CogniMeet_server#readme",
+  "dependencies": {
+    "axios": "^1.9.0",
+    "bcrypt": "^6.0.0",
+    "cookieparser": "^0.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.15.2",
+    "nodemon": "^3.1.10"
+  }
+}
