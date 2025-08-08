@@ -1,31 +1,18 @@
-import express from 'express';
-import bodyParser from 'body-parser';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
-dotenv.config();
+import dotenv from "dotenv";
+import { dbConnect } from "./db/index.js";
+import  app  from "./app.js";
+dotenv.config({ path: "./.env" });
+dbConnect()
+  .then(() => {
+    app.on("error", (error) => {
+      console.error("🔴 Error interacting with database:", error);
+    });
 
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-// add cors
-app.use(cors({
-    origin: frontendUrl,
-    credentials: true,
-}));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
-
-app.get('/', (req, res) => {
-    res.send('Welcome to the Shulker Server!');
-});
-
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-}
-);
-
-export default app;
+    const PORT = process.env.PORT || 4020;
+    app.listen(PORT, () => {
+      console.log(`✅ Server is running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.log("🔴 MongoDB connection failed !!!", error);
+  });
