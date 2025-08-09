@@ -28,7 +28,7 @@ const generateAccessAndRefreshToken = async (id) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, role, password } = req.body;
+  const { username, email, password } = req.body;
   if (!username || !email || !password) {
     throw new ApiError("All fields are required", 400);
   }
@@ -43,7 +43,6 @@ const registerUser = asyncHandler(async (req, res) => {
   }
   const user = await User.create({
     username: username.toLowerCase(),
-    role,
     email,
     password,
   });
