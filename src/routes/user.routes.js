@@ -8,11 +8,20 @@ import {
   getCurrentUser,
   resetPassword,
   googleAuthCallback,
+  updateAvatar,
 } from "../controllers/user.controller.js";
 import { validateJWT } from "../middlewares/auth.middleware.js";
 import passport from "passport";
+import { uploadWithDestination } from "../middlewares/multer.middleware.js";
 
 const router = Router();
+
+const fields = [
+  {
+    name: 'avatar',
+    maxCount: 1
+  }];
+
 
 // PUBLIC ROUTES
 router.post("/register", registerUser);
@@ -26,6 +35,7 @@ router.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/login' }),
   googleAuthCallback
 );
+router.post("/update-avatar", validateJWT, uploadWithDestination('any', fields, './uploads/profile/avatar'), updateAvatar);
 
 // PROTECTED ROUTES
 router.get("/current-user", validateJWT, getCurrentUser);
