@@ -197,7 +197,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
 const getCurrentUser = asyncHandler(async (req, res) => {
   const user
-   = await User.findById(req.user._id).select("-password -refreshToken");
+    = await User.findById(req.user._id).select("-password -refreshToken");
   if (!user) {
     throw new ApiError("User not found", 404);
   }
@@ -270,6 +270,31 @@ const googleAuthCallback = (req, res) => {
   });
 };
 
+const updateAvatar = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  if (!req.file) {
+    throw new ApiError("No file uploaded", 400);
+  }
+
+  const baseUrl = process.env.BASE_URL || "http://localhost:5000/";
+  const avatarUrl = baseUrl + req.file.path.replace(/\\/g, "/");
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { avatar: avatarUrl },
+    { new: true, select: "-password -refreshToken" }
+  );
+
+  if (!updatedUser) {
+    throw new ApiError("User not found", 404);
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse("Avatar updated successfully", 200, updatedUser));
+});
+
 export {
   registerUser,
   loginUser,
@@ -278,5 +303,6 @@ export {
   forgotPassword,
   getCurrentUser,
   resetPassword,
-  googleAuthCallback
+  googleAuthCallback,
+  updateAvatar
 };
