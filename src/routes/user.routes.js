@@ -19,7 +19,6 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
-router.post("/logout", logoutUser);
 router.post("/refresh-token", refreshAccessToken);
 router.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] }));
@@ -30,5 +29,6 @@ router.get('/auth/google/callback',
 
 // PROTECTED ROUTES
 router.get("/current-user", validateJWT, getCurrentUser);
+router.post("/logout", validateJWT, logoutUser);
 
 export default router;
