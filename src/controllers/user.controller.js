@@ -262,6 +262,27 @@ const forgotPassword = asyncHandler(async (req, res) => {
   }
 });
 
+const googleAuthCallback = (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Google authentication failed" });
+  }
+  const accessToken = req.user.generateAccessToken();
+  const refreshToken = req.user.generateRefreshToken();
+  req.user.refreshToken = refreshToken;
+  req.user.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    message: "User authenticated via Google",
+    user: {
+      username: req.user.username,
+      email: req.user.email,
+      avatar: req.user.avatar,
+    },
+    accessToken,
+    refreshToken,
+  });
+};
+
 export {
   registerUser,
   loginUser,
@@ -270,4 +291,5 @@ export {
   forgotPassword,
   getCurrentUser,
   resetPassword,
+  googleAuthCallback
 };
