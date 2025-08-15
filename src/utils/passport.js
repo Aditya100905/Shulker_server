@@ -9,12 +9,13 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${BACKEND_URL}/api/v1/users/auth/google/callback`,
+      callbackURL: `${process.env.BACKEND_URL}/api/v1/users/auth/google/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails[0].value;
-        let username = email.split("@");
+
+        let username = email.split("@")[0];
 
         let user = await User.findOne({
           $or: [
@@ -32,14 +33,19 @@ passport.use(
             attempt++;
           }
 
+          const names = profile.displayName ? profile.displayName.split(" ") : [];
+          const firstname = "user_";
+          const lastname = username;
+
           user = await User.create({
             googleId: profile.id,
             username: username,
             email: email,
-            avatar: profile.photos?.value
+            avatar: profile.photos?.[0]?.value || null,
+            firstname: firstname,
+            lastname: lastname
           });
-        }
-        else {
+        } else {
           if (!user.googleId) {
             user.googleId = profile.id;
             await user.save();
