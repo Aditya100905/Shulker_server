@@ -33,6 +33,7 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!username || !email || !password) {
     throw new ApiError("All fields are required", 400);
   }
+
   const existedUser = await User.findOne({ email });
   if (existedUser) {
     throw new ApiError("Email already exists", 409);
@@ -42,17 +43,23 @@ const registerUser = asyncHandler(async (req, res) => {
   if (duplicateUsername) {
     throw new ApiError("Username already exists", 409);
   }
+
   const user = await User.create({
     username: username.toLowerCase(),
     email,
     password,
+    firstname: "user_",
+    lastname: username.toLowerCase()
   });
+
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
+
   if (!createdUser) {
     throw new ApiError("User creation failed", 500);
   }
+
   return res
     .status(201)
     .json(new ApiResponse("User registered Successfully", 200, createdUser));
@@ -249,26 +256,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
   }
 });
 
-// const googleAuthCallback = (req, res) => {
-//   if (!req.user) {
-//     return res.status(401).json({ message: "Google authentication failed" });
-//   }
-//   const accessToken = req.user.generateAccessToken();
-//   const refreshToken = req.user.generateRefreshToken();
-//   req.user.refreshToken = refreshToken;
-//   req.user.save({ validateBeforeSave: false });
-
-//   res.status(200).json({
-//     message: "User authenticated via Google",
-//     user: {
-//       username: req.user.username,
-//       email: req.user.email,
-//       avatar: req.user.avatar,
-//     },
-//     accessToken,
-//     refreshToken,
-//   });
-// };
 const googleAuthCallback = async (req, res) => {
   try {
     if (!req.user) {
@@ -294,28 +281,156 @@ const googleAuthCallback = async (req, res) => {
 };
 
 const updateAvatar = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+  try {
+    const userId = req.user._id;
 
-  if (!req.file) {
-    throw new ApiError("No file uploaded", 400);
+    if (!req.file) {
+      throw new ApiError("No file uploaded", 400);
+    }
+
+    const baseUrl = process.env.BASE_URL || "http://localhost:5000/";
+    const avatarUrl = baseUrl + req.file.path.replace(/\\/g, "/");
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { avatar: avatarUrl },
+      { new: true, select: "-password -refreshToken" }
+    );
+
+    if (!updatedUser) {
+      throw new ApiError("User not found", 404);
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse("Avatar updated successfully", 200, updatedUser));
+  } catch (error) {
+    console.error("Update Avatar Error:", error);
+    return res.status(500).json(new ApiResponse("Failed to update avatar", 500));
   }
+});
 
-  const baseUrl = process.env.BASE_URL || "http://localhost:5000/";
-  const avatarUrl = baseUrl + req.file.path.replace(/\\/g, "/");
-
-  const updatedUser = await User.findByIdAndUpdate(
-    userId,
-    { avatar: avatarUrl },
-    { new: true, select: "-password -refreshToken" }
-  );
-
-  if (!updatedUser) {
-    throw new ApiError("User not found", 404);
+const editUserProfile = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user._id;
+    // first name , last name, bio, dob
+    const { firstName, lastName, bio, dob } = req.body;
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { firstName, lastName, bio, dob },
+      { new: true, select: "-password -refreshToken" }
+    );
+    if (!updatedUser) {
+      throw new ApiError("User not found", 404);
+    }
+    return res
+      .status(200)
+      .json(new ApiResponse("User profile updated successfully", 200, updatedUser));
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse("Error updating user profile", 500));
   }
+});
 
-  return res
-    .status(200)
-    .json(new ApiResponse("Avatar updated successfully", 200, updatedUser));
+const changePassword = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      throw new ApiError("Current password and new password are required", 400);
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ApiError("User not found", 404);
+    }
+
+    const isMatch = await user.isPasswordCorrect(currentPassword);
+    if (!isMatch) {
+      throw new ApiError("Current password is incorrect", 401);
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse("Password changed successfully", 200));
+  } catch (error) {
+    console.error("Error changing password:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse("Error changing password", 500));
+  }
+});
+
+const sendEmailVerification = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new ApiError("User not found", 404);
+    }
+
+    if (user.isEmailVerified) {
+      throw new ApiError("Email already verified", 400);
+    }
+
+    const verificationToken = user.getEmailVerificationToken();
+    await user.save({ validateBeforeSave: false });
+
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+
+    const message = `Click the link below to verify your email:\n\n${verifyUrl}\n\nThis link is valid for 10 minutes.`;
+
+    await sendEmail({
+      email: user.email,
+      subject: "Email Verification",
+      message,
+    });
+
+    res
+      .status(200)
+      .json(new ApiResponse({ message: "Verification email sent" }, 200));
+  } catch (error) {
+    console.error("Error sending email verification:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse("Error sending email verification", 500));
+  }
+});
+
+const verifyEmail = asyncHandler(async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      throw new ApiError("Invalid or expired token", 400);
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpire = undefined;
+    await user.save();
+
+    res.status(200).json(new ApiResponse({ message: "Email verified successfully" }, 200));
+  } catch (error) {
+    console.error("Error verifying email:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse("Error verifying email", 500));
+  }
 });
 
 export {
@@ -327,5 +442,9 @@ export {
   getCurrentUser,
   resetPassword,
   googleAuthCallback,
-  updateAvatar
+  updateAvatar,
+  editUserProfile,
+  changePassword,
+  sendEmailVerification,
+  verifyEmail,
 };

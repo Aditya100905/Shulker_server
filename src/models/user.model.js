@@ -14,8 +14,28 @@ const userSchema = new Schema(
       trim: true,
       index: true,
     },
+    firstname: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    lastname: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    bio: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     avatar: {
       type: String,
+      default: "default.webp",
+    },
+    dob: {
+      type: Date,
+      default: Date.now
     },
     email: {
       type: String,
@@ -49,6 +69,18 @@ const userSchema = new Schema(
       type: Date,
       default: null,
     },
+    emailVerificationToken: {
+      type: String,
+      default: null
+    },
+    emailVerificationExpire: {
+      type: Date,
+      default: null
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    }
   },
   {
     timestamps: true,
@@ -92,6 +124,20 @@ userSchema.methods.getResetPasswordToken = function () {
   this.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
 
   return resetToken;
+};
+
+// Generate email verification token
+userSchema.methods.getEmailVerificationToken = function () {
+  const verificationToken = crypto.randomBytes(20).toString("hex");
+
+  this.emailVerificationToken = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+
+  this.emailVerificationExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  return verificationToken;
 };
 
 export const User = mongoose.model("User", userSchema);
