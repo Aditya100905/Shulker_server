@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import dotenv from 'dotenv';
 dotenv.config();
 
+
 passport.use(
   new GoogleStrategy(
     {
@@ -13,23 +14,34 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        const email = profile.emails[0].value;
+        let username = profile.displayName;
         let user = await User.findOne({
           $or: [
             { googleId: profile.id },
-            { email: profile.emails[0].value }
+            { email: email }
           ]
         });
 
         if (!user) {
+          let usernameExists = await User.findOne({ username });
+          let attempt = 0;
+          while (usernameExists && attempt < 5) {
+            username = generateRandomUsername(profile.displayName);
+            usernameExists = await User.findOne({ username });
+            attempt++;
+          }
           user = await User.create({
             googleId: profile.id,
-            username: profile.displayName,
-            email: profile.emails[0].value,
-            avatar: profile.photos[0].value,
+            username: username,
+            email: email,
+            avatar: profile.photos.value,
           });
-        } else if (!user.googleId) {
-          user.googleId = profile.id;
-          await user.save();
+        } else {
+          if (!user.googleId) {
+            user.googleId = profile.id;
+            await user.save();
+          }
         }
 
         return done(null, user);
@@ -39,6 +51,12 @@ passport.use(
     }
   )
 );
+
+function generateRandomUsername(base) {
+  const sanitizedBase = base.replace(/\s+/g, '-').toLowerCase();
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  return `${sanitizedBase}-${randomSuffix}`;
+}
 
 passport.serializeUser((user, done) => {
   done(null, user.id);
