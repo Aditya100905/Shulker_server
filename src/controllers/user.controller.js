@@ -249,25 +249,48 @@ const forgotPassword = asyncHandler(async (req, res) => {
   }
 });
 
-const googleAuthCallback = (req, res) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Google authentication failed" });
-  }
-  const accessToken = req.user.generateAccessToken();
-  const refreshToken = req.user.generateRefreshToken();
-  req.user.refreshToken = refreshToken;
-  req.user.save({ validateBeforeSave: false });
+// const googleAuthCallback = (req, res) => {
+//   if (!req.user) {
+//     return res.status(401).json({ message: "Google authentication failed" });
+//   }
+//   const accessToken = req.user.generateAccessToken();
+//   const refreshToken = req.user.generateRefreshToken();
+//   req.user.refreshToken = refreshToken;
+//   req.user.save({ validateBeforeSave: false });
 
-  res.status(200).json({
-    message: "User authenticated via Google",
-    user: {
-      username: req.user.username,
-      email: req.user.email,
-      avatar: req.user.avatar,
-    },
-    accessToken,
-    refreshToken,
-  });
+//   res.status(200).json({
+//     message: "User authenticated via Google",
+//     user: {
+//       username: req.user.username,
+//       email: req.user.email,
+//       avatar: req.user.avatar,
+//     },
+//     accessToken,
+//     refreshToken,
+//   });
+// };
+const googleAuthCallback = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
+    }
+
+    // Generate tokens
+    const accessToken = req.user.generateAccessToken();
+    const refreshToken = req.user.generateRefreshToken();
+
+    // Save refresh token in DB
+    req.user.refreshToken = refreshToken;
+    await req.user.save({ validateBeforeSave: false });
+
+    // Redirect to frontend with tokens
+    res.redirect(
+      `${process.env.FRONTEND_URL}/auth-success?accessToken=${accessToken}&refreshToken=${refreshToken}`
+    );
+  } catch (error) {
+    console.error("Google Auth Callback Error:", error);
+    res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
+  }
 };
 
 const updateAvatar = asyncHandler(async (req, res) => {
