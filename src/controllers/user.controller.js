@@ -314,10 +314,10 @@ const editUserProfile = asyncHandler(async (req, res) => {
   try {
     const userId = req.user._id;
     // first name , last name, bio, dob
-    const { firstName, lastName, bio, dob } = req.body;
+    const { firstname, lastname, bio, dob } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { firstName, lastName, bio, dob },
+      { firstname, lastname, bio, dob },
       { new: true, select: "-password -refreshToken" }
     );
     if (!updatedUser) {
