@@ -33,6 +33,10 @@ const userSchema = new Schema(
       type: String,
       default: "/uploads/profile/avatar/default.webp",
     },
+    avatarId: {
+      type: String,
+      default: null,
+    },
     dob: {
       type: Date,
       default: Date.now
@@ -77,7 +81,7 @@ const userSchema = new Schema(
     isEmailVerified: {
       type: Boolean,
       default: function () {
-        return !!this.googleId; 
+        return !!this.googleId;
       }
     }
   },

@@ -5,8 +5,8 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail.js";
 import { cookiesOptions } from "../utils/cookiesOptions.js";
-import { deleteFile } from "../utils/FileHelper.js";
-import path from "path";
+import cloudinary from "../utils/cloudinary.js";
+import streamifier from "streamifier";
 
 const generateAccessAndRefreshToken = async (id) => {
   try {
@@ -52,7 +52,7 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
     firstname: "user_",
     lastname: username.toLowerCase(),
-    avatar: process.env.BACKEND_URL+"/uploads/profile/avatar/default.webp",
+    avatar: process.env.BACKEND_URL + "/uploads/profile/avatar/default.webp",
   });
 
   const createdUser = await User.findById(user._id).select(
@@ -287,7 +287,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
   try {
     const userId = req.user._id;
 
-    if (!req.files || !req.files.avatar) {
+    if (!req.file) {
       throw new ApiError("No file uploaded", 400);
     }
 
@@ -296,30 +296,42 @@ const updateAvatar = asyncHandler(async (req, res) => {
       throw new ApiError("User not found", 404);
     }
 
-    if (user.avatar && !user.avatar.includes("/uploads/profile/avatar/default.webp")) {
-      const baseUrl = process.env.BASE_URL || "http://localhost:5000/";
-      const oldAvatarPath = user.avatar.replace(baseUrl, "");
-      const filePath = path.join(process.cwd(), oldAvatarPath);
-
+    // Delete old avatar from Cloudinary (if not default)
+    if (user.avatarId && !user.avatar.includes("default.webp")) {
       try {
-        deleteFile(filePath);
+        await cloudinary.uploader.destroy(user.avatarId);
       } catch (err) {
         console.error("Error deleting old avatar:", err.message);
       }
     }
 
-    const baseUrl = process.env.BASE_URL || "http://localhost:5000/";
-    const avatarUrl = baseUrl + req.files.avatar[0].path.replace(/\\/g, "/");
+    // Upload new avatar to Cloudinary
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "avatars",
+        format: "webp",
+        transformation: [{ width: 300, height: 300, crop: "fill" }],
+      },
+      async (error, result) => {
+        if (error) {
+          console.error("Cloudinary upload error:", error);
+          throw new ApiError("Failed to upload avatar", 500);
+        }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { avatar: avatarUrl },
-      { new: true, select: "-password -refreshToken" }
+        // Save new avatar
+        const updatedUser = await User.findByIdAndUpdate(
+          userId,
+          { avatar: result.secure_url, avatarId: result.public_id },
+          { new: true, select: "-password -refreshToken" }
+        );
+
+        return res
+          .status(200)
+          .json(new ApiResponse("Avatar updated successfully", 200, updatedUser));
+      }
     );
 
-    return res
-      .status(200)
-      .json(new ApiResponse("Avatar updated successfully", 200, updatedUser));
+    streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
   } catch (error) {
     console.error("Update Avatar Error:", error);
     return res.status(500).json(new ApiResponse("Failed to update avatar", 500));
