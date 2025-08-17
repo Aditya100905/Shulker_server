@@ -79,7 +79,9 @@ const userSchema = new Schema(
     },
     isEmailVerified: {
       type: Boolean,
-      default: false,
+      default: function () {
+        return !!this.googleId; 
+      }
     }
   },
   {

@@ -47,6 +47,6 @@ router.get("/current-user", validateJWT, getCurrentUser);
 router.post("/logout", validateJWT, logoutUser);
 router.post("/edit-profile", validateJWT, editUserProfile);
 router.post("/change-password", validateJWT, changePassword);
-router.post("/change-password", validateJWT, sendEmailVerification);
+router.post("/send-email-verification", validateJWT, sendEmailVerification);
 
 export default router;
