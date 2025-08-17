@@ -5,6 +5,8 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail.js";
 import { cookiesOptions } from "../utils/cookiesOptions.js";
+import { deleteFile } from "../utils/FileHelper.js";
+import path from "path";
 
 const generateAccessAndRefreshToken = async (id) => {
   try {
@@ -49,7 +51,8 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     firstname: "user_",
-    lastname: username.toLowerCase()
+    lastname: username.toLowerCase(),
+    avatar: process.env.BACKEND_URL+"/uploads/profile/avatar/default.webp",
   });
 
   const createdUser = await User.findById(user._id).select(
@@ -284,22 +287,35 @@ const updateAvatar = asyncHandler(async (req, res) => {
   try {
     const userId = req.user._id;
 
-    if (!req.file) {
+    if (!req.files || !req.files.avatar) {
       throw new ApiError("No file uploaded", 400);
     }
 
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ApiError("User not found", 404);
+    }
+
+    if (user.avatar && !user.avatar.includes("/uploads/profile/avatar/default.webp")) {
+      const baseUrl = process.env.BASE_URL || "http://localhost:5000/";
+      const oldAvatarPath = user.avatar.replace(baseUrl, "");
+      const filePath = path.join(process.cwd(), oldAvatarPath);
+
+      try {
+        deleteFile(filePath);
+      } catch (err) {
+        console.error("Error deleting old avatar:", err.message);
+      }
+    }
+
     const baseUrl = process.env.BASE_URL || "http://localhost:5000/";
-    const avatarUrl = baseUrl + req.file.path.replace(/\\/g, "/");
+    const avatarUrl = baseUrl + req.files.avatar[0].path.replace(/\\/g, "/");
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { avatar: avatarUrl },
       { new: true, select: "-password -refreshToken" }
     );
-
-    if (!updatedUser) {
-      throw new ApiError("User not found", 404);
-    }
 
     return res
       .status(200)

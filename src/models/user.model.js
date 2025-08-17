@@ -31,7 +31,7 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String,
-      default: "default.webp",
+      default: "/uploads/profile/avatar/default.webp",
     },
     dob: {
       type: Date,
@@ -54,9 +54,6 @@ const userSchema = new Schema(
       type: String,
       unique: true,
       sparse: true,
-    },
-    avatar: {
-      type: String,
     },
     refreshToken: {
       type: String,

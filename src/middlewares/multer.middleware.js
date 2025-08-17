@@ -10,21 +10,14 @@ export const uploadWithDestination = (method, fields, uploadPath) => {
     filename: function (req, file, cb) {
       let ext = path.extname(file.originalname).toLowerCase();
       let mimeType = mime.lookup(file.originalname);
-      
       const originalName = path.basename(file.originalname, path.extname(file.originalname));
-      if(mimeType.startsWith("image/")){
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-        cb(null, originalName + uniqueSuffix + ".webp");
-      }
-      else{
-        var num = "";
-        while(fs.existsSync(path.join(uploadPath,originalName +num+ ext))){
-          num = num + 1;
-        }
-        cb(null, originalName +num+ ext);}
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, originalName + "-" + uniqueSuffix + ext);
     },
   });
+
   const upload = multer({ storage }).fields(fields);
+
   return async (req, res, next) => {
     upload(req, res, async (err) => {
       if (err instanceof multer.MulterError) {
@@ -37,7 +30,7 @@ export const uploadWithDestination = (method, fields, uploadPath) => {
         return res.status(500).send("Error uploading files: " + err.message);
       }
       try {
-        const response = await processFiles(req.files);
+        await processFiles(req.files);
         next();
       } catch (processErr) {
         cleanupUploadedFiles(req.files);
@@ -51,57 +44,49 @@ export const uploadWithDestination = (method, fields, uploadPath) => {
 };
 
 const processFiles = async (files) => {
-  const tempRemovingFiles = [];
   const processFile = async (file) => {
     let mimeType = mime.lookup(file.originalname);
     let ext = path.extname(file.originalname).toLowerCase();
-    if (mimeType.startsWith("application/")) {
-      return;
-    }
-    const originalPath = file.path.replace(/\\/g, "/");
-    const compressedPath = path.join(path.dirname(originalPath), "temp" + ext);
-    await fs.rename(originalPath, compressedPath);
-    if (mimeType.startsWith("image/") && ext !== ".pdf") {
-      let transformer = sharp(compressedPath);
+
+    if (mimeType && mimeType.startsWith("image/") && ext !== ".pdf") {
+      const originalPath = file.path.replace(/\\/g, "/");
+      const webpPath = originalPath.replace(ext, ".webp");
+
       try {
-        const response=transformer.webp({ quality: 75 })
-        await response.toFile(originalPath);
-        tempRemovingFiles.push(compressedPath);
+        await sharp(originalPath).webp({ quality: 75 }).toFile(webpPath);
+
+        // remove original (jpeg/png/etc)
+        await fs.remove(originalPath);
+
+        // update file object to point to new webp
+        file.path = webpPath;
+        file.filename = path.basename(webpPath);
       } catch (error) {
-        console.log("Error:", error);
-        fs.renameSync(compressedPath, originalPath);
+        console.error("Sharp error:", error);
       }
-    } else {
-      tempRemovingFiles.push(compressedPath);
     }
   };
+
   for (const fieldName in files) {
     const fileArray = files[fieldName];
     for (const file of fileArray) {
       await processFile(file);
     }
   }
-  return tempRemovingFiles;
 };
 
-const cleanupTempFiles = (files) => {
-  for (const tempFile of files) {
-    if (fs.existsSync(tempFile)) {
-      fs.unlink(tempFile, (err) => {
+const cleanupUploadedFiles = (files) => {
+  if (files) {
+    for (const fieldName in files) {
+      files[fieldName].forEach((file) => {
+        if (file && file.path && fs.existsSync(file.path)) {
+          fs.unlink(file.path, (unlinkErr) => {
+            if (unlinkErr) {
+              console.error("Error deleting file:", unlinkErr);
+            }
+          });
+        }
       });
     }
-  }
-};
-const cleanupUploadedFiles = (files) => {
-  if (files && Array.isArray(files)) {
-    files.forEach((file) => {
-      if (file && file.path) {
-        fs.unlink(file.path, (unlinkErr) => {
-          if (unlinkErr) {
-            console.error("Error deleting file:", unlinkErr);
-          }
-        });
-      }
-    });
   }
 };
