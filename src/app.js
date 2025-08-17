@@ -26,8 +26,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// allow for static files in the uploads directory
-app.use('/uploads', express.static('uploads'));
+app.use(express.static('public'));
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
