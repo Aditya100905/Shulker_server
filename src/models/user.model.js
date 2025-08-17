@@ -31,7 +31,7 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String,
-      default: "/uploads/profile/avatar/default.webp",
+      default: "default.webp",
     },
     avatarId: {
       type: String,

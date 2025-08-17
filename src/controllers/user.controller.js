@@ -52,7 +52,7 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
     firstname: "user_",
     lastname: username.toLowerCase(),
-    avatar: process.env.BACKEND_URL + "/uploads/profile/avatar/default.webp",
+    avatar: process.env.BACKEND_URL + "/default.webp",
   });
 
   const createdUser = await User.findById(user._id).select(
