@@ -35,7 +35,7 @@ A modular, production-ready Node.js/Express backend for user management, authent
 ---
 
 ## 📁 Project Structure
-
+```
 ├── .env.sample
 ├── .gitignore
 ├── README.md
@@ -67,7 +67,7 @@ A modular, production-ready Node.js/Express backend for user management, authent
 ├── cookiesOptions.js
 ├── passport.js
 └── sendEmail.js
-
+```
 ---
 
 ## ⚙️ Setup & Installation
