@@ -1,4 +1,4 @@
-# 🚀 Shulker Backend (v2 of VConnect)
+# 🚀 Shulker Backend (v2 of [VConnect](https://github.com/vansh-000/vconnect))
 
 > **Ongoing Group Project**  
 > This repository contains the backend API for **Shulker**, the new version 2 iteration of my earlier personal project, VConnect.  
