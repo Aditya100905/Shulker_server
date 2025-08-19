@@ -105,7 +105,6 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_URL=
 
-text
 
 ### 4. Start the Server
 
@@ -113,8 +112,6 @@ npm start
 
 or
 node src/server.js
-
-text
 
 The app runs at `http://localhost:<PORT>`
 
