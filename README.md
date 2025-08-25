@@ -76,7 +76,6 @@ A modular, production-ready Node.js/Express backend for user management, authent
 
 git clone https://https://github.com/vansh-000/Shulker_server.git
 
-
 ### 2. Install Dependencies
 
 npm install
@@ -85,7 +84,7 @@ npm install
 
 - Copy `.env.sample` ➡️ `.env`
 - Fill in required values (see sample below):
-
+```
 PORT=
 FRONTEND_URL=
 EMAIL_USER=
@@ -104,14 +103,13 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_URL=
-
+```
 
 ### 4. Start the Server
 
-npm start
-
+npm run dev
 or
-node src/server.js
+nodemon src/server.js
 
 The app runs at `http://localhost:<PORT>`
 
