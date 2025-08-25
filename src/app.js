@@ -40,5 +40,7 @@ app.use(passport.session());
 // Routes
 import userRouter from './routes/user.routes.js';
 app.use("/api/v1/users", userRouter);
+import meetingsRouter from './routes/meetings.routes.js';
+app.use("/api/v1/meetings", meetingsRouter);
 
 export default app;

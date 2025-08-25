@@ -31,7 +31,7 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String,
-      default: "default.webp",
+      default: "user.png",
     },
     avatarId: {
       type: String,
