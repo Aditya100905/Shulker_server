@@ -4,7 +4,8 @@ import {
   getToken,
   joinMeeting,
   getUserMeetings,
-  deleteMeeting
+  deleteMeeting,
+  endMeeting
 } from '../controllers/meetings.controller.js';
 
 const router = express.Router();
@@ -14,5 +15,6 @@ router.post('/token', getToken);
 router.post('/join', joinMeeting);
 router.get('/user/:userId', getUserMeetings);
 router.delete('/delete', deleteMeeting);
+router.post('/end', endMeeting);
 
 export default router;
