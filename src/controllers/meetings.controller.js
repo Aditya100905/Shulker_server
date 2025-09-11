@@ -4,7 +4,7 @@ import { User } from '../models/user.model.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import crypto from 'node:crypto';
 
-export const createMeeting = asyncHandler(async (req, res) => {
+const createMeeting = asyncHandler(async (req, res) => {
     try {
         const { meetingId: providedMeetingId } = req.body || {};
         const userId = String(req.user._id);
@@ -121,7 +121,7 @@ const deleteMeeting = asyncHandler(async (req, res) => {
     return res.status(200).json({ message: 'Meeting deleted successfully' });
 });
 
-export const endMeeting = asyncHandler(async (req, res) => {
+const endMeeting = asyncHandler(async (req, res) => {
     const { meetingId, userId } = req.body;
 
     if (!meetingId || !userId) {
