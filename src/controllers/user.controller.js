@@ -10,7 +10,6 @@ import streamifier from "streamifier";
 
 const generateAccessAndRefreshToken = async (id) => {
   try {
-    console.log("User ID received for token generation:", id);
 
     const user = await User.findById(id);
     if (!user) {
@@ -111,7 +110,6 @@ const loginUser = asyncHandler(async (req, res) => {
 
 const logoutUser = asyncHandler(async (req, res) => {
   try {
-    console.log("Logout request received:", req.user);
     await User.findByIdAndUpdate(
       req.user._id,
       {
@@ -224,7 +222,6 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const forgotPassword = asyncHandler(async (req, res) => {
   try {
-    console.log("Forgot password request received:", req.body);
 
     const { email } = req.body;
     if (!email) {
@@ -247,8 +244,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
       subject: "Password Reset",
       message,
     });
-
-    console.log("Email sent successfully");
 
     res
       .status(200)
