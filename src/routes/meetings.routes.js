@@ -7,14 +7,15 @@ import {
   deleteMeeting,
   endMeeting
 } from '../controllers/meetings.controller.js';
+import { validateJWT } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.post('/create', createMeeting);
-router.post('/token', getToken);
-router.post('/join', joinMeeting);
-router.get('/user/:userId', getUserMeetings);
-router.delete('/delete', deleteMeeting);
-router.post('/end', endMeeting);
+router.post('/create', validateJWT, createMeeting);
+router.post('/token', validateJWT, getToken);
+router.post('/join', validateJWT, joinMeeting);
+router.get('/user/:userId', validateJWT, getUserMeetings);
+router.delete('/delete', validateJWT, deleteMeeting);
+router.post('/end', validateJWT, endMeeting);
 
 export default router;
