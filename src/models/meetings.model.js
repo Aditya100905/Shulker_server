@@ -18,6 +18,27 @@ const meetingSchema = new Schema(
                 ref: "User",
             },
         ],
+        invitedParticipants: [
+            {
+                type: String,
+            },
+        ],
+        scheduledTime: {
+            type: Date,
+            required: false,
+        },
+        status: {
+            type: String,
+            enum: ["scheduled", "ongoing", "ended"],
+            default: "scheduled",
+        },
+        endedAt: {
+            type: Date,
+        },
+        endedBy: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+        },
     },
     {
         timestamps: true,
