@@ -3,6 +3,7 @@ import { Meeting } from '../models/meetings.model.js';
 import { User } from '../models/user.model.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import crypto from 'node:crypto';
+import sendEmail from '../utils/sendEmail.js';
 
 const createMeeting = asyncHandler(async (req, res) => {
     try {
@@ -155,4 +156,86 @@ const endMeeting = asyncHandler(async (req, res) => {
     });
 });
 
-export { createMeeting, getToken, joinMeeting, getUserMeetings, deleteMeeting, endMeeting };
+const scheduleMeeting = asyncHandler(async (req, res) => {
+    try {
+        const { meetingId, scheduledTime, participants } = req.body;
+        const userId = String(req.user._id);
+        const meetingUUID = meetingId || crypto.randomUUID();
+
+        await client.upsertUsers([{ id: userId, role: 'user' }]);
+
+        const meeting = await Meeting.create({
+            meetingId: meetingUUID,
+            createdBy: userId,
+            scheduledTime,
+            members: [userId],
+            invitedParticipants: participants,
+            status: 'scheduled',
+        });
+
+        for (const email of participants) {
+            const subject = 'Meeting Invitation';
+            const inviteLink = `${process.env.FRONTEND_URL}/accept-invite/${meetingId}}`;
+            const message = `You have been invited to a meeting.\n\nMeeting ID: ${meetingUUID}\n\nScheduled Time: ${new Date(scheduledTime).toLocaleString()}\n\nPlease click here to accept the invitation and join: ${inviteLink}`;
+            await sendEmail({ email, subject, message });
+        }
+
+        const populatedMeeting = await Meeting.findById(meeting._id)
+            .populate('createdBy', 'username email')
+            .populate('members', 'username email');
+
+        return res.status(201).json({ message: 'Scheduled meeting created', meeting: populatedMeeting });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+const addParticipants = asyncHandler(async (req, res) => {
+    const { meetingId, participants } = req.body;
+    const meeting = await Meeting.findOne({ meetingId });
+    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+
+    for (const email of participants) {
+        if (!meeting.invitedParticipants.includes(email)) {
+            meeting.invitedParticipants.push(email);
+            const subject = 'You have been invited to a meeting';
+            const inviteLink = `${process.env.FRONTEND_URL}/accept-invite/${meetingId}}`;
+            const message = `You have been invited to a meeting.\n\nMeeting ID: ${meetingId}\n\nScheduled Time: ${new Date(meeting.scheduledTime).toLocaleString()}\n\nPlease click the link to accept the invitation and join: ${inviteLink}`;
+            await sendEmail({ email, subject, message });
+        }
+    }
+
+    await meeting.save();
+
+    const populatedMeeting = await Meeting.findById(meeting._id)
+        .populate('createdBy', 'username email')
+        .populate('members', 'username email');
+    return res.status(200).json({ message: 'Participants invited', meeting: populatedMeeting });
+});
+
+const acceptInvite = asyncHandler(async (req, res) => {
+    const { meetingId, email, userId } = req.body;
+
+    const meeting = await Meeting.findOne({ meetingId });
+    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+
+    if (!meeting.invitedParticipants.includes(email)) {
+        return res.status(403).json({ message: 'No invitation found for this email' });
+    }
+
+    meeting.invitedParticipants = meeting.invitedParticipants.filter(e => e !== email);
+    if (!meeting.members.includes(userId)) {
+        meeting.members.push(userId);
+    }
+
+    await meeting.save();
+
+    const populatedMeeting = await Meeting.findById(meeting._id)
+        .populate('createdBy', 'username email')
+        .populate('members', 'username email');
+
+    return res.status(200).json({ message: 'Invitation accepted, joined the meeting', meeting: populatedMeeting });
+});
+
+export { createMeeting, getToken, joinMeeting, getUserMeetings, deleteMeeting, scheduleMeeting, endMeeting, addParticipants, acceptInvite };
