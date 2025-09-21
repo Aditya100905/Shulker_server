@@ -1,4 +1,5 @@
 import client from '../utils/streamClient.js';
+import mongoose from "mongoose";
 import { Meeting } from '../models/meetings.model.js';
 import { User } from '../models/user.model.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -22,12 +23,12 @@ const createMeeting = asyncHandler(async (req, res) => {
         const newMeeting = await Meeting.create({
             meetingId: call.id,
             createdBy: req.user._id,
-            members: [req.user._id],
+            members: [{ user: req.user._id, joinedAt: new Date() }],
         });
 
         const populatedMeeting = await Meeting.findById(newMeeting._id)
             .populate('createdBy', 'username email')
-            .populate('members', 'username email');
+            .populate('members.user', 'username email');
 
         return res.status(201).json({
             message: 'Meeting created successfully',
@@ -67,7 +68,8 @@ const getToken = asyncHandler(async (req, res) => {
 const joinMeeting = asyncHandler(async (req, res) => {
     const { userId, meetingId } = req.body;
 
-    if (!userId || !meetingId) return res.status(400).json({ message: 'User ID and Meeting ID required' });
+    if (!userId || !meetingId)
+        return res.status(400).json({ message: 'User ID and Meeting ID required' });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -75,14 +77,21 @@ const joinMeeting = asyncHandler(async (req, res) => {
     const meeting = await Meeting.findOne({ meetingId });
     if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
 
-    if (!meeting.members.includes(user._id)) {
-        meeting.members.push(user._id);
+    const existingMemberIndex = meeting.members.findIndex(m => m.user.toString() === userId);
+
+    if (existingMemberIndex >= 0) {
+        if (meeting.members[existingMemberIndex].leftAt) {
+            meeting.members[existingMemberIndex].leftAt = undefined;
+            await meeting.save();
+        }
+    } else {
+        meeting.members.push({ user: userId, joinedAt: new Date() });
         await meeting.save();
     }
 
     const populatedMeeting = await Meeting.findById(meeting._id)
         .populate('createdBy', 'username email')
-        .populate('members', 'username email');
+        .populate('members.user', 'username email');
 
     return res.status(200).json({
         message: 'Joined meeting successfully',
@@ -93,34 +102,46 @@ const joinMeeting = asyncHandler(async (req, res) => {
 
 const getUserMeetings = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user)
+        return res.status(404).json({ message: 'User not found' });
 
-    const meetings = await Meeting.find({ members: user._id })
-        .populate('createdBy', 'username email')
-        .populate('members', 'username email')
+    const meetings = await Meeting.find({ 'members.user': user._id, 'members.leftAt': { $exists: false } })
+        .populate('createdBy', 'username email avatar')
+        .populate({
+            path: 'members.user',
+            select: 'username email avatar',
+            perDocumentLimit: 4
+        })
         .sort({ createdAt: -1 });
 
     return res.status(200).json(meetings);
 });
 
 
-const deleteMeeting = asyncHandler(async (req, res) => {
+const leaveMeeting = asyncHandler(async (req, res) => {
     const { meetingId, userId } = req.body;
 
-    if (!meetingId || !userId) return res.status(400).json({ message: 'Meeting ID and User ID required' });
+    if (!meetingId || !userId)
+        return res.status(400).json({ message: 'Meeting ID and User ID required' });
 
     const meeting = await Meeting.findOne({ meetingId });
-    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+    if (!meeting)
+        return res.status(404).json({ message: 'Meeting not found' });
 
-    if (meeting.createdBy.toString() !== userId) {
-        return res.status(403).json({ message: 'Only the creator can delete the meeting' });
+    if (meeting.createdBy.toString() === userId) {
+        return res.status(403).json({ message: 'Creator cannot leave the meeting. End it instead.' });
     }
 
-    await meeting.deleteOne();
-    return res.status(200).json({ message: 'Meeting deleted successfully' });
+    const memberObj = meeting.members.find(m => m.user.toString() === userId);
+    if (memberObj && !memberObj.leftAt) {
+        memberObj.leftAt = new Date();
+        await meeting.save();
+    }
+
+    return res.status(200).json({ message: 'Left meeting successfully' });
 });
+
 
 const endMeeting = asyncHandler(async (req, res) => {
     const { meetingId, userId } = req.body;
@@ -148,7 +169,7 @@ const endMeeting = asyncHandler(async (req, res) => {
 
     const populated = await Meeting.findById(meeting._id)
         .populate('createdBy', 'username email')
-        .populate('members', 'username email');
+        .populate('members.user', 'username email');
 
     return res.status(200).json({
         message: 'Meeting ended successfully',
@@ -168,21 +189,21 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
             meetingId: meetingUUID,
             createdBy: userId,
             scheduledTime,
-            members: [userId],
+            members: [{ user: userId, joinedAt: new Date() }],
             invitedParticipants: participants,
             status: 'scheduled',
         });
 
         for (const email of participants) {
             const subject = 'Meeting Invitation';
-            const inviteLink = `${process.env.FRONTEND_URL}/accept-invite/${meetingId}}`;
+            const inviteLink = `${process.env.FRONTEND_URL}/accept-invite/${meetingUUID}`;
             const message = `You have been invited to a meeting.\n\nMeeting ID: ${meetingUUID}\n\nScheduled Time: ${new Date(scheduledTime).toLocaleString()}\n\nPlease click here to accept the invitation and join: ${inviteLink}`;
             await sendEmail({ email, subject, message });
         }
 
         const populatedMeeting = await Meeting.findById(meeting._id)
             .populate('createdBy', 'username email')
-            .populate('members', 'username email');
+            .populate('members.user', 'username email');
 
         return res.status(201).json({ message: 'Scheduled meeting created', meeting: populatedMeeting });
     } catch (error) {
@@ -200,7 +221,7 @@ const addParticipants = asyncHandler(async (req, res) => {
         if (!meeting.invitedParticipants.includes(email)) {
             meeting.invitedParticipants.push(email);
             const subject = 'You have been invited to a meeting';
-            const inviteLink = `${process.env.FRONTEND_URL}/accept-invite/${meetingId}}`;
+            const inviteLink = `${process.env.FRONTEND_URL}/accept-invite/${meetingId}`;
             const message = `You have been invited to a meeting.\n\nMeeting ID: ${meetingId}\n\nScheduled Time: ${new Date(meeting.scheduledTime).toLocaleString()}\n\nPlease click the link to accept the invitation and join: ${inviteLink}`;
             await sendEmail({ email, subject, message });
         }
@@ -210,7 +231,7 @@ const addParticipants = asyncHandler(async (req, res) => {
 
     const populatedMeeting = await Meeting.findById(meeting._id)
         .populate('createdBy', 'username email')
-        .populate('members', 'username email');
+        .populate('members.user', 'username email');
     return res.status(200).json({ message: 'Participants invited', meeting: populatedMeeting });
 });
 
@@ -225,17 +246,29 @@ const acceptInvite = asyncHandler(async (req, res) => {
     }
 
     meeting.invitedParticipants = meeting.invitedParticipants.filter(e => e !== email);
-    if (!meeting.members.includes(userId)) {
-        meeting.members.push(userId);
+
+    const alreadyJoined = meeting.members.some(m => m.user.toString() === userId && !m.leftAt);
+    if (!alreadyJoined) {
+        meeting.members.push({ user: userId, joinedAt: new Date() });
     }
 
     await meeting.save();
 
     const populatedMeeting = await Meeting.findById(meeting._id)
         .populate('createdBy', 'username email')
-        .populate('members', 'username email');
+        .populate('members.user', 'username email');
 
     return res.status(200).json({ message: 'Invitation accepted, joined the meeting', meeting: populatedMeeting });
 });
 
-export { createMeeting, getToken, joinMeeting, getUserMeetings, deleteMeeting, scheduleMeeting, endMeeting, addParticipants, acceptInvite };
+export {
+    createMeeting,
+    getToken,
+    joinMeeting,
+    getUserMeetings,
+    leaveMeeting,
+    scheduleMeeting,
+    endMeeting,
+    addParticipants,
+    acceptInvite,
+};
