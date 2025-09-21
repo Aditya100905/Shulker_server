@@ -110,21 +110,26 @@ const getUserMeetings = asyncHandler(async (req, res) => {
 });
 
 
-const deleteMeeting = asyncHandler(async (req, res) => {
+const leaveMeeting = asyncHandler(async (req, res) => {
     const { meetingId, userId } = req.body;
 
-    if (!meetingId || !userId) return res.status(400).json({ message: 'Meeting ID and User ID required' });
+    if (!meetingId || !userId)
+        return res.status(400).json({ message: 'Meeting ID and User ID required' });
 
     const meeting = await Meeting.findOne({ meetingId });
-    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+    if (!meeting)
+        return res.status(404).json({ message: 'Meeting not found' });
 
-    if (meeting.createdBy.toString() !== userId) {
-        return res.status(403).json({ message: 'Only the creator can delete the meeting' });
+    meeting.members.pull(userId);
+    await meeting.save();
+
+    if (meeting.createdBy.toString() === userId) {
+        return res.status(403).json({ message: 'Creator cannot leave the meeting. End it instead.' });
     }
 
-    await meeting.deleteOne();
-    return res.status(200).json({ message: 'Meeting deleted successfully' });
+    return res.status(200).json({ message: 'Left meeting successfully' });
 });
+
 
 const endMeeting = asyncHandler(async (req, res) => {
     const { meetingId, userId } = req.body;
@@ -242,4 +247,4 @@ const acceptInvite = asyncHandler(async (req, res) => {
     return res.status(200).json({ message: 'Invitation accepted, joined the meeting', meeting: populatedMeeting });
 });
 
-export { createMeeting, getToken, joinMeeting, getUserMeetings, deleteMeeting, scheduleMeeting, endMeeting, addParticipants, acceptInvite };
+export { createMeeting, getToken, joinMeeting, getUserMeetings, leaveMeeting, scheduleMeeting, endMeeting, addParticipants, acceptInvite };
