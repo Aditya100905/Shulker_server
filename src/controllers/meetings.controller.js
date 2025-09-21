@@ -93,13 +93,17 @@ const joinMeeting = asyncHandler(async (req, res) => {
 
 const getUserMeetings = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user)
+        return res.status(404).json({ message: 'User not found' });
 
     const meetings = await Meeting.find({ members: user._id })
-        .populate('createdBy', 'username email')
-        .populate('members', 'username email')
+        .populate('createdBy', 'username email avatar')
+        .populate({
+            path: 'members',
+            select: 'username email avatar',
+            perDocumentLimit: 4
+        })
         .sort({ createdAt: -1 });
 
     return res.status(200).json(meetings);

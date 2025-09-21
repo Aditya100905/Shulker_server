@@ -1,5 +1,23 @@
 import mongoose, { Schema } from "mongoose";
 
+const memberSubSchema = new Schema(
+    {
+        user: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
+        joinedAt: {
+            type: Date,
+            default: Date.now,
+        },
+        leftAt: {
+            type: Date,
+        },
+    },
+    { _id: false }
+);
+
 const meetingSchema = new Schema(
     {
         meetingId: {
@@ -12,12 +30,7 @@ const meetingSchema = new Schema(
             ref: "User",
             required: true,
         },
-        members: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        ],
+        members: [memberSubSchema],
         invitedParticipants: [
             {
                 type: String,
@@ -25,7 +38,6 @@ const meetingSchema = new Schema(
         ],
         scheduledTime: {
             type: Date,
-            required: false,
         },
         status: {
             type: String,
@@ -40,9 +52,7 @@ const meetingSchema = new Schema(
             ref: "User",
         },
     },
-    {
-        timestamps: true,
-    }
+    { timestamps: true }
 );
 
 export const Meeting = mongoose.model("Meeting", meetingSchema);
