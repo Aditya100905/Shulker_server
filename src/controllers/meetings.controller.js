@@ -1,5 +1,4 @@
 import client from '../utils/streamClient.js';
-import mongoose from "mongoose";
 import { Meeting } from '../models/meetings.model.js';
 import { User } from '../models/user.model.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -11,7 +10,7 @@ const createMeeting = asyncHandler(async (req, res) => {
         const { meetingId: providedMeetingId } = req.body || {};
         const userId = String(req.user._id);
         await client.upsertUsers([{ id: userId, role: 'user' }]);
-
+        const now = new Date();
         const meetingId = providedMeetingId || crypto.randomUUID();
         const call = client.video.call('default', meetingId);
         await call.getOrCreate({
@@ -23,6 +22,8 @@ const createMeeting = asyncHandler(async (req, res) => {
         const newMeeting = await Meeting.create({
             meetingId: call.id,
             createdBy: req.user._id,
+            scheduledTime: now,
+            status: 'ongoing',
             members: [{ user: req.user._id, joinedAt: new Date() }],
         });
 
@@ -162,8 +163,15 @@ const endMeeting = asyncHandler(async (req, res) => {
     const call = client.video.call('default', meetingId);
     await call.end();
 
+    const now = new Date();
+    meeting.members.forEach(member => {
+        if (!member.leftAt) {
+            member.leftAt = now;
+        }
+    });
+
     meeting.status = 'ended';
-    meeting.endedAt = new Date();
+    meeting.endedAt = now;
     meeting.endedBy = meeting.createdBy;
     await meeting.save();
 
