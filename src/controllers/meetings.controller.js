@@ -107,12 +107,12 @@ const getUserMeetings = asyncHandler(async (req, res) => {
     if (!user)
         return res.status(404).json({ message: 'User not found' });
 
-    const meetings = await Meeting.find({ 'members.user': user._id, 'members.leftAt': { $exists: false } })
+    const meetings = await Meeting.find({ 'members.user': user._id })
         .populate('createdBy', 'username email avatar')
         .populate({
             path: 'members.user',
             select: 'username email avatar',
-            perDocumentLimit: 4
+            perDocumentLimit: 5
         })
         .sort({ createdAt: -1 });
 
