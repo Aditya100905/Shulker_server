@@ -39,7 +39,7 @@ const userSchema = new Schema(
     },
     dob: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     },
     email: {
       type: String,
@@ -72,18 +72,18 @@ const userSchema = new Schema(
     },
     emailVerificationToken: {
       type: String,
-      default: null
+      default: null,
     },
     emailVerificationExpire: {
       type: Date,
-      default: null
+      default: null,
     },
     isEmailVerified: {
       type: Boolean,
       default: function () {
         return !!this.googleId;
-      }
-    }
+      },
+    },
   },
   {
     timestamps: true,
