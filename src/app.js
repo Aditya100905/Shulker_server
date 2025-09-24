@@ -36,11 +36,21 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
+app.use((err, req, res, next) => {
+  res.status(err.statusCode || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    code: err.statusCode || 500,
+  });
+});
+
 
 // Routes
 import userRouter from './routes/user.routes.js';
 app.use("/api/v1/users", userRouter);
 import meetingsRouter from './routes/meetings.routes.js';
 app.use("/api/v1/meetings", meetingsRouter);
+import summaryRouter from './routes/summary.routes.js';
+app.use("/api/v1/summaries", summaryRouter);
 
 export default app;
