@@ -8,26 +8,16 @@ import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 
 const createMeeting = asyncHandler(async (req, res) => {
-    const { meetingId: providedMeetingId } = req.body || {};
+    const { meetingId: providedMeetingId } = req.body;
     const userId = String(req.user._id);
-    await client.upsertUsers([{ id: userId, role: 'user' }]);
-    const now = new Date();
     const meetingId = providedMeetingId || crypto.randomUUID();
 
-    const call = client.video.call('default', meetingId);
-    await call.getOrCreate({
-        data: {
-            created_by_id: userId,
-            members: [{ user_id: userId, role: 'admin' }],
-        },
-    });
-
     const newMeeting = await Meeting.create({
-        meetingId: call.id,
-        createdBy: req.user._id,
-        scheduledTime: now,
+        meetingId,
+        createdBy: userId,
+        scheduledTime:new Date(),
         status: 'ongoing',
-        members: [{ user: req.user._id, joinedAt: new Date() }],
+        members:[{ user: userId, joinedAt: new Date() }],
     });
 
     const populatedMeeting = await Meeting.findById(newMeeting._id)
@@ -38,14 +28,18 @@ const createMeeting = asyncHandler(async (req, res) => {
 });
 
 const getToken = asyncHandler(async (req, res) => {
-    const { userId } = req.body;
-    if (!userId) throw new ApiError('User ID required', 400);
-    const user = await User.findById(userId);
-    if (!user) throw new ApiError('User not found', 404);
+  const { userId } = req.body;
+  if (!userId) throw new ApiError('User ID required', 400);
+  const user = await User.findById(userId);
+  if (!user) throw new ApiError('User not found', 404);
 
-    const token = client.createToken(user._id);
-    res.json(new ApiResponse('Token generated successfully', 200, { token }));
+  const token = client.createToken(user._id);
+
+  console.log("Generated Stream token for user_id:", user._id, token);
+
+  res.json(new ApiResponse('Token generated successfully', 200, { token }));
 });
+
 
 const joinMeeting = asyncHandler(async (req, res) => {
     const { userId, meetingId } = req.body;
@@ -121,11 +115,6 @@ const endMeeting = asyncHandler(async (req, res) => {
         throw new ApiError('Only the creator can end the meeting', 403);
     }
 
-    await client.upsertUsers([{ id: String(userId), role: 'user' }]);
-
-    const call = client.video.call('default', meetingId);
-    await call.end();
-
     const now = new Date();
     meeting.members.forEach(member => {
         if (!member.leftAt) {
@@ -149,8 +138,6 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
     const { meetingId, scheduledTime, participants } = req.body;
     const userId = String(req.user._id);
     const meetingUUID = meetingId || crypto.randomUUID();
-
-    await client.upsertUsers([{ id: userId, role: 'user' }]);
 
     const meeting = await Meeting.create({
         meetingId: meetingUUID,

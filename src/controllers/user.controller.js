@@ -165,9 +165,9 @@ const googleAuthCallback = asyncHandler(async (req, res) => {
   const refreshToken = req.user.generateRefreshToken();
   req.user.refreshToken = refreshToken;
   await req.user.save({ validateBeforeSave: false });
-  res.redirect(
-    `${process.env.FRONTEND_URL}/auth-success?accessToken=${accessToken}&refreshToken=${refreshToken}`
-  );
+  const redirectUrl = `${process.env.FRONTEND_URL}/auth-success?accessToken=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(refreshToken)}`;
+
+  res.redirect(redirectUrl);
 });
 
 const updateAvatar = asyncHandler(async (req, res, next) => {
