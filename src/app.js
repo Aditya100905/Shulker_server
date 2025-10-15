@@ -52,5 +52,9 @@ import meetingsRouter from './routes/meetings.routes.js';
 app.use("/api/v1/meetings", meetingsRouter);
 import summaryRouter from './routes/summary.routes.js';
 app.use("/api/v1/summaries", summaryRouter);
+import questionsRouter from './routes/questions.routes.js';
+app.use("/api/v1/meetings", questionsRouter);
+import responsesRouter from './routes/responses.routes.js';
+app.use("/api/v1/responses", responsesRouter);
 
 export default app;
