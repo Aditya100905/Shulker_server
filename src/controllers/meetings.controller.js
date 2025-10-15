@@ -32,11 +32,7 @@ const getToken = asyncHandler(async (req, res) => {
   if (!userId) throw new ApiError('User ID required', 400);
   const user = await User.findById(userId);
   if (!user) throw new ApiError('User not found', 404);
-
   const token = client.createToken(user._id);
-
-  console.log("Generated Stream token for user_id:", user._id, token);
-
   res.json(new ApiResponse('Token generated successfully', 200, { token }));
 });
 
