@@ -6,9 +6,13 @@ import {
   getUserMeetings,
   endMeeting,
   scheduleMeeting,
-  leaveMeeting
+  leaveMeeting,
+  addRecordingUrl,
+  getRecordingbyMeetingId,
+  getAllRecordings
 } from '../controllers/meetings.controller.js';
 import { validateJWT } from "../middlewares/auth.middleware.js";
+import { upload } from '../middlewares/multer.middleware.js';
 
 const router = express.Router();
 
@@ -21,5 +25,8 @@ router.post('/end', validateJWT, endMeeting);
 router.post('/schedule', validateJWT, scheduleMeeting);
 router.post('/add-participants', validateJWT, scheduleMeeting);
 router.post('/accept-invite', validateJWT, scheduleMeeting);
+router.post('/add-recording', validateJWT,upload.single("recording"), addRecordingUrl);
+router.get('/recordings/:meetingId', validateJWT, getRecordingbyMeetingId);
+router.get('/recordings', validateJWT, getAllRecordings);
 
 export default router;
