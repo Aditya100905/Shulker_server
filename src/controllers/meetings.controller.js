@@ -6,6 +6,8 @@ import crypto from 'node:crypto';
 import sendEmail from '../utils/sendEmail.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+import cloudinary from "../utils/cloudinary.js";
+import streamifier from "streamifier";
 
 const createMeeting = asyncHandler(async (req, res) => {
     const { meetingId: providedMeetingId } = req.body;
@@ -15,9 +17,9 @@ const createMeeting = asyncHandler(async (req, res) => {
     const newMeeting = await Meeting.create({
         meetingId,
         createdBy: userId,
-        scheduledTime:new Date(),
+        scheduledTime: new Date(),
         status: 'ongoing',
-        members:[{ user: userId, joinedAt: new Date() }],
+        members: [{ user: userId, joinedAt: new Date() }],
     });
 
     const populatedMeeting = await Meeting.findById(newMeeting._id)
@@ -28,12 +30,12 @@ const createMeeting = asyncHandler(async (req, res) => {
 });
 
 const getToken = asyncHandler(async (req, res) => {
-  const { userId } = req.body;
-  if (!userId) throw new ApiError('User ID required', 400);
-  const user = await User.findById(userId);
-  if (!user) throw new ApiError('User not found', 404);
-  const token = client.createToken(user._id);
-  res.json(new ApiResponse('Token generated successfully', 200, { token }));
+    const { userId } = req.body;
+    if (!userId) throw new ApiError('User ID required', 400);
+    const user = await User.findById(userId);
+    if (!user) throw new ApiError('User not found', 404);
+    const token = client.createToken(user._id);
+    res.json(new ApiResponse('Token generated successfully', 200, { token }));
 });
 
 
@@ -207,6 +209,93 @@ const acceptInvite = asyncHandler(async (req, res) => {
     res.json(new ApiResponse('Invitation accepted and joined meeting successfully', 200, populatedMeeting));
 });
 
+const addRecordingUrl = asyncHandler(async (req, res, next) => {
+  const { meetingId } = req.body;
+
+  if (!meetingId) {
+    throw new ApiError("Meeting ID is required", 400);
+  }
+
+  const meeting = await Meeting.findById(meetingId);
+  if (!meeting) {
+    throw new ApiError("Meeting not found", 404);
+  }
+
+  if (!req.file) {
+    throw new ApiError("No recording file provided", 400);
+  }
+
+  const uploadStream = cloudinary.uploader.upload_stream(
+    {
+      folder: "meeting-recordings",
+      resource_type: "auto",
+    },
+    async (error, result) => {
+      if (error) {
+        console.error("Cloudinary Upload Error:", error);
+        next(new ApiError("Failed to upload recording", 500));
+      } else {
+        meeting.recordingUrl = result.secure_url;
+        meeting.recordingPublicId = result.public_id;
+        await meeting.save();
+
+        res.json(
+          new ApiResponse(
+            "Recording uploaded successfully",
+            200,
+            {
+              recordingUrl: result.secure_url,
+              meetingId: meeting._id,
+            }
+          )
+        );
+      }
+    }
+  );
+  streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+});
+
+const getRecordingbyMeetingId = asyncHandler(async (req, res, next) => {
+  const { meetingId } = req.params;
+
+  const meeting = await Meeting.findOne({ meetingId });
+  if (!meeting) {
+    throw new ApiError("Meeting not found", 404);
+  }
+
+  if (!meeting.recordingUrl) {
+    throw new ApiError("No recording found for this meeting", 404);
+  }
+
+  res.json(
+    new ApiResponse(
+      "Recording fetched successfully",
+      200,
+      {
+        recordingUrl: meeting.recordingUrl,
+        meetingId: meeting._id,
+      }
+    )
+  );
+});
+
+const getAllRecordings = asyncHandler(async (req, res, next) => {
+  const meetingsWithRecordings = await Meeting.find({ recordingUrl: { $exists: true, $ne: null } });
+
+  const recordings = meetingsWithRecordings.map(meeting => ({
+    meetingId: meeting.meetingId,
+    recordingUrl: meeting.recordingUrl,
+  }));
+
+  res.json(
+    new ApiResponse(
+      "Recordings fetched successfully",
+      200,
+      recordings
+    )
+  );
+});
+
 export {
     createMeeting,
     getToken,
@@ -217,4 +306,7 @@ export {
     endMeeting,
     addParticipants,
     acceptInvite,
+    addRecordingUrl,
+    getRecordingbyMeetingId,
+    getAllRecordings,
 };

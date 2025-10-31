@@ -51,6 +51,9 @@ const meetingSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+    recordingUrl: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
