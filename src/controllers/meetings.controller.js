@@ -216,7 +216,7 @@ const addRecordingUrl = asyncHandler(async (req, res, next) => {
     throw new ApiError("Meeting ID is required", 400);
   }
 
-  const meeting = await Meeting.findById(meetingId);
+  const meeting = await Meeting.findOne({ meetingId });
   if (!meeting) {
     throw new ApiError("Meeting not found", 404);
   }
@@ -235,19 +235,14 @@ const addRecordingUrl = asyncHandler(async (req, res, next) => {
         console.error("Cloudinary Upload Error:", error);
         next(new ApiError("Failed to upload recording", 500));
       } else {
-        meeting.recordingUrl = result.secure_url;
-        meeting.recordingPublicId = result.public_id;
+        meeting.recordingUrl.push(result.secure_url);
         await meeting.save();
 
         res.json(
-          new ApiResponse(
-            "Recording uploaded successfully",
-            200,
-            {
-              recordingUrl: result.secure_url,
-              meetingId: meeting._id,
-            }
-          )
+          new ApiResponse("Recording uploaded successfully", 200, {
+            recordingUrl: result.secure_url,
+            meetingId: meeting.meetingId,
+          })
         );
       }
     }
@@ -263,39 +258,32 @@ const getRecordingbyMeetingId = asyncHandler(async (req, res, next) => {
     throw new ApiError("Meeting not found", 404);
   }
 
-  if (!meeting.recordingUrl) {
-    throw new ApiError("No recording found for this meeting", 404);
+  if (!meeting.recordingUrl || meeting.recordingUrl.length === 0) {
+    throw new ApiError("No recordings found for this meeting", 404);
   }
 
   res.json(
-    new ApiResponse(
-      "Recording fetched successfully",
-      200,
-      {
-        recordingUrl: meeting.recordingUrl,
-        meetingId: meeting._id,
-      }
-    )
+    new ApiResponse("Recordings fetched successfully", 200, {
+      recordingUrls: meeting.recordingUrl,
+      meetingId: meeting.meetingId,
+    })
   );
 });
 
 const getAllRecordings = asyncHandler(async (req, res, next) => {
-  const meetingsWithRecordings = await Meeting.find({ recordingUrl: { $exists: true, $ne: null } });
+  const meetingsWithRecordings = await Meeting.find({
+    recordingUrl: { $exists: true, $ne: [] },
+  });
 
-  const recordings = meetingsWithRecordings.map(meeting => ({
+  const recordings = meetingsWithRecordings.map((meeting) => ({
     meetingId: meeting.meetingId,
-    recordingUrl: meeting.recordingUrl,
+    recordingUrls: meeting.recordingUrl,
   }));
 
   res.json(
-    new ApiResponse(
-      "Recordings fetched successfully",
-      200,
-      recordings
-    )
+    new ApiResponse("Recordings fetched successfully", 200, recordings)
   );
 });
-
 export {
     createMeeting,
     getToken,
