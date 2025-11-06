@@ -22,7 +22,7 @@ const getSummaryByMeeting = asyncHandler(async (req, res) => {
     const { meetingId } = req.params;
     const summary = await Summary.findOne({ meeting: meetingId });
     if (!summary) {
-        throw new ApiError('Summary not found', 404);
+        res.status(200).json(new ApiResponse('No summary found for this meeting.', 200, ""));
     }
     res.status(200).json(new ApiResponse('Summary fetched successfully', 200, summary));
 });
