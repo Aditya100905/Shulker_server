@@ -36,14 +36,6 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
-app.use((err, req, res, next) => {
-  res.status(err.statusCode || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-    code: err.statusCode || 500,
-  });
-});
-
 
 // Routes
 import userRouter from './routes/user.routes.js';
@@ -56,5 +48,13 @@ import questionsRouter from './routes/questions.routes.js';
 app.use("/api/v1/question", questionsRouter);
 import responsesRouter from './routes/responses.routes.js';
 app.use("/api/v1/response", responsesRouter);
+
+app.use((err, req, res, next) => {
+  res.status(err.statusCode || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    code: err.statusCode || 500,
+  });
+});
 
 export default app;

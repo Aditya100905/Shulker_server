@@ -199,13 +199,13 @@ const acceptInvite = asyncHandler(async (req, res) => {
   const meeting = await Meeting.findOne({ meetingId });
   if (!meeting) throw new ApiError('Meeting not found', 404);
 
-  if (!meeting.invitedParticipants.includes(email)) {
-    throw new ApiError('You are not invited to this meeting', 403);
-  }
-
   const alreadyJoined = meeting.members.some(m => m.user.toString() === userId);
   if (alreadyJoined) {
     throw new ApiError('You have already accepted the invite', 400);
+  }
+
+  if (!meeting.invitedParticipants.includes(email)) {
+    throw new ApiError('You are not invited to this meeting', 403);
   }
 
   meeting.members.push({ user: userId, joinedAt: new Date() });
