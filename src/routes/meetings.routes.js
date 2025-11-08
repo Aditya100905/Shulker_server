@@ -7,6 +7,8 @@ import {
   endMeeting,
   scheduleMeeting,
   leaveMeeting,
+  addParticipants,
+  acceptInvite,
   addRecordingUrl,
   getRecordingbyMeetingId,
   getAllRecordings
@@ -23,9 +25,9 @@ router.get('/user/:userId', validateJWT, getUserMeetings);
 router.post('/leave', validateJWT, leaveMeeting);
 router.post('/end', validateJWT, endMeeting);
 router.post('/schedule', validateJWT, scheduleMeeting);
-router.post('/add-participants', validateJWT, scheduleMeeting);
-router.post('/accept-invite', validateJWT, scheduleMeeting);
-router.post('/add-recording', validateJWT,upload.single("recording"), addRecordingUrl);
+router.post('/add-participants', validateJWT, addParticipants);
+router.post('/accept-invite', validateJWT, acceptInvite);
+router.post('/add-recording', validateJWT, upload.single("recording"), addRecordingUrl);
 router.get('/recordings/:meetingId', validateJWT, getRecordingbyMeetingId);
 router.get('/recordings', validateJWT, getAllRecordings);
 
