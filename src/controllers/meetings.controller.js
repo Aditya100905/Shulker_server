@@ -142,6 +142,11 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
   const userId = String(req.user._id);
   const meetingUUID = meetingId || crypto.randomUUID();
 
+  const existingMeeting = await Meeting.findOne({ meetingId });
+  if (existingMeeting) {
+    throw new ApiError('Meeting ID already exists. YOu are doing something wrong.', 400);
+  }
+
   const meeting = await Meeting.create({
     meetingId: meetingUUID,
     createdBy: userId,
@@ -198,12 +203,14 @@ const acceptInvite = asyncHandler(async (req, res) => {
     throw new ApiError('You are not invited to this meeting', 403);
   }
 
-  meeting.invitedParticipants = meeting.invitedParticipants.filter(e => e !== email);
-
-  const alreadyJoined = meeting.members.some(m => m.user.toString() === userId && !m.leftAt);
-  if (!alreadyJoined) {
-    meeting.members.push({ user: userId, joinedAt: new Date() });
+  const alreadyJoined = meeting.members.some(m => m.user.toString() === userId);
+  if (alreadyJoined) {
+    throw new ApiError('You have already accepted the invite', 400);
   }
+
+  meeting.members.push({ user: userId, joinedAt: new Date() });
+
+  meeting.invitedParticipants = meeting.invitedParticipants.filter(e => e !== email);
 
   await meeting.save();
 
