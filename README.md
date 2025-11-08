@@ -1,9 +1,5 @@
 
 # 🚀 Shulker Backend
-
-> **Ongoing Group Project**
-> Shulker is the second-generation version of a previous project, **[VConnect](https://github.com/vansh-000/vconnect)** — now re-engineered as a collaborative, scalable and modular backend system using modern backend standards.
-
 A modular, production-ready Node.js/Express backend for user management, authentication, profile updates, and file handling. Integrates JWT, Google OAuth, secure password reset, Cloudinary media storage, and a modern scalable architecture.
 
 💡 **Made by [Vansh Verma](https://github.com/vansh-000)**  
