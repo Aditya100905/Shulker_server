@@ -48,6 +48,8 @@ import questionsRouter from './routes/questions.routes.js';
 app.use("/api/v1/question", questionsRouter);
 import responsesRouter from './routes/responses.routes.js';
 app.use("/api/v1/response", responsesRouter);
+import filesRouter from './routes/files.routes.js';
+app.use("/api/v1", filesRouter);
 
 app.use((err, req, res, next) => {
   res.status(err.statusCode || 500).json({
