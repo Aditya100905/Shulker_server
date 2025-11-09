@@ -1,8 +1,9 @@
-import { Resend } from 'resend';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const apiKey = process.env.MAILJET_API_KEY;
+const secretKey = process.env.MAILJET_SECRET;
 
 const sendEmail = async ({ email, subject, message }) => {
   if (!email) {
@@ -10,16 +11,42 @@ const sendEmail = async ({ email, subject, message }) => {
   }
 
   try {
-    const info = await resend.emails.send({
-      from: 'onboarding@resend.dev',
-      to: email,
-      subject: subject,
-      text: message,
+    const response = await fetch("https://api.mailjet.com/v3.1/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization":
+          "Basic " + Buffer.from(`${apiKey}:${secretKey}`).toString("base64"),
+      },
+      body: JSON.stringify({
+        Messages: [
+          {
+            From: {
+              Email: process.env.MAILJET_FROM_EMAIL,
+              Name: process.env.MAILJET_FROM_NAME || "Your App",
+            },
+            To: [
+              {
+                Email: email,
+              },
+            ],
+            Subject: subject,
+            TextPart: message,
+          },
+        ],
+      }),
     });
 
-    console.log("Email sent:", info);
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error("Mailjet Error:", result);
+      throw new Error(result?.Messages?.[0]?.Errors?.[0]?.ErrorMessage || "Failed to send email");
+    }
+
+    console.log("Email sent:", result);
   } catch (error) {
-    console.error("Resend Email Error:", error);
+    console.error("Mailjet Email Error:", error);
   }
 };
 
