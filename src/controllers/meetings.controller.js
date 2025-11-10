@@ -157,9 +157,26 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
   });
 
   for (const email of participants) {
-    const subject = 'Meeting Invitation';
+    const subject = 'You’re Invited! Join a Meeting Scheduled by SHULKER';
     const inviteLink = `${process.env.FRONTEND_URL}/accept-invite/${meetingUUID}`;
-    const message = `You have been invited to a meeting.\n\nMeeting ID: ${meetingUUID}\n\nScheduled Time: ${new Date(scheduledTime).toLocaleString()}\n\nPlease click here to accept the invitation and join: ${inviteLink}`;
+    const message = `
+Hello,
+
+You’ve been invited to join a meeting organized via SHULKER.
+
+📅 Meeting Details
+- Meeting ID: ${meetingUUID}
+- Meeting Organizer: ${meeting.createdBy.firstname}
+- Scheduled Time: ${new Date(meeting.scheduledTime).toLocaleString()}
+
+To accept the invitation and join the meeting, please click the link below:
+👉 ${inviteLink}
+
+We look forward to your participation and valuable input!
+
+Best regards,  
+The SHULKER Team
+`;
     await sendEmail({ email, subject, message });
   }
 
@@ -178,9 +195,28 @@ const addParticipants = asyncHandler(async (req, res) => {
   for (const email of participants) {
     if (!meeting.invitedParticipants.includes(email)) {
       meeting.invitedParticipants.push(email);
-      const subject = 'You have been invited to a meeting';
+
+      const subject = 'You’re Invited! Join a Meeting Scheduled by SHULKER';
       const inviteLink = `${process.env.FRONTEND_URL}/accept-invite/${meetingId}`;
-      const message = `You have been invited to a meeting.\n\nMeeting ID: ${meetingId}\n\nScheduled Time: ${new Date(meeting.scheduledTime).toLocaleString()}\n\nPlease click the link to accept the invitation and join: ${inviteLink}`;
+      const message = `
+Hello,
+
+You’ve been invited to join a meeting organized via SHULKER.
+
+📅 Meeting Details
+- Meeting ID: ${meetingId}
+- Meeting Organizer: ${meeting.createdBy.firstname}
+- Scheduled Time: ${new Date(meeting.scheduledTime).toLocaleString()}
+
+To accept the invitation and join the meeting, please click the link below:
+👉 ${inviteLink}
+
+We look forward to your participation and valuable input!
+
+Best regards,  
+The SHULKER Team
+`;
+
       await sendEmail({ email, subject, message });
     }
   }
