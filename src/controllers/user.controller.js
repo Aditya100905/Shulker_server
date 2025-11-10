@@ -243,23 +243,48 @@ const changePassword = asyncHandler(async (req, res) => {
 const sendEmailVerification = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const user = await User.findById(userId);
+
   if (!user) {
     throw new ApiError("User not found", 404);
   }
+
   if (user.isEmailVerified) {
     throw new ApiError("Email is already verified", 400);
   }
+
   const verificationToken = user.getEmailVerificationToken();
   await user.save({ validateBeforeSave: false });
+
   const verifyUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-  const message = `Click the link below to verify your email:\n\n${verifyUrl}\n\nThis link is valid for 10 minutes.`;
+
+  const subject = "Verify Your Email Address - SHULKER";
+
+  const message = `
+Hello ${user.firstname || "there"},
+
+Welcome to SHULKER! 🎉  
+
+To complete your registration and verify your email address, please click the link below:
+
+🔗 ${verifyUrl}
+
+This link will expire in **10 minutes**, so be sure to verify soon.
+
+If you did not request this email, you can safely ignore it.
+
+Best regards,  
+The SHULKER Team
+`;
+
   await sendEmail({
     email: user.email,
-    subject: "Email Verification",
+    subject,
     message,
   });
+
   res.json(new ApiResponse("Verification email sent", 200));
 });
+
 
 const verifyEmail = asyncHandler(async (req, res) => {
   const { token } = req.params;
