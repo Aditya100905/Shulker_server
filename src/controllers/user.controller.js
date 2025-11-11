@@ -8,6 +8,7 @@ import { cookiesOptions } from "../utils/cookiesOptions.js";
 import cloudinary from "../utils/cloudinary.js";
 import streamifier from "streamifier";
 import jwt from "jsonwebtoken";
+import { Meeting } from "../models/meetings.model.js";
 
 const generateAccessAndRefreshToken = async (id) => {
   const user = await User.findById(id);
@@ -129,7 +130,9 @@ const resetPassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select("-password -refreshToken");
+  // i want to populate meeting in user's personalRoomId
+  const userId = req.user._id;
+  const user = await User.findById(userId).select("-password -refreshToken").populate({ path: 'personalRoomId', model: 'Meeting' });
   if (!user) {
     throw new ApiError("User not found", 404);
   }
@@ -303,8 +306,25 @@ const verifyEmail = asyncHandler(async (req, res) => {
   res.json(new ApiResponse("Email verified successfully", 200));
 });
 
+const personalMeetingRoom = asyncHandler(async (req, res) => {
+  const userId = String(req.user._id);
+  const { meetingId } = req.body;
+
+  const user = await User.findById(userId);
+  if (!user) throw new ApiError('User not found', 404);
+
+  const meeting = await Meeting.findOne({ meetingId });
+  if (!meeting) throw new ApiError('Meeting not found', 404);
+
+  user.personalRoomId = meeting._id;
+  await user.save();
+
+  res.json(new ApiResponse('Personal meeting room set successfully', 200, user));
+});
+
 export {
   registerUser,
+  personalMeetingRoom,
   loginUser,
   logoutUser,
   refreshAccessToken,
