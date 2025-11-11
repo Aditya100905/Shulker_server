@@ -59,6 +59,10 @@ const userSchema = new Schema(
       unique: true,
       sparse: true,
     },
+    personalRoomId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Meeting",
+    },
     refreshToken: {
       type: String,
     },

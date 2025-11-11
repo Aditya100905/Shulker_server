@@ -13,6 +13,7 @@ import {
   changePassword,
   verifyEmail,
   sendEmailVerification,
+  personalMeetingRoom,
 } from "../controllers/user.controller.js";
 import { validateJWT } from "../middlewares/auth.middleware.js";
 import passport from "passport";
@@ -44,5 +45,6 @@ router.post("/logout", validateJWT, logoutUser);
 router.post("/edit-profile", validateJWT, editUserProfile);
 router.post("/change-password", validateJWT, changePassword);
 router.post("/send-email-verification", validateJWT, sendEmailVerification);
+router.post("/personal-meeting-room", validateJWT, personalMeetingRoom);
 
 export default router;
